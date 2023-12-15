@@ -65,10 +65,12 @@ func (s Decryption) Decrypt(ciphertext, mac []byte, key id.Curve25519) ([]byte, 
 	if err != nil {
 		return nil, err
 	}
-	decodedMAC, err := goolm.Base64Decode(mac)
+	decoded := make([]byte, base64.RawStdEncoding.DecodedLen(len(mac)))
+	writtenBytes, err := base64.RawStdEncoding.Decode(decoded, mac)
 	if err != nil {
 		return nil, err
 	}
+	decodedMAC := decoded[:writtenBytes]
 	cipher := cipher.NewAESSHA256(nil)
 	verified, err := cipher.Verify(sharedSecret, ciphertext, decodedMAC)
 	if err != nil {

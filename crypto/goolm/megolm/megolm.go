@@ -3,6 +3,7 @@ package megolm
 
 import (
 	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 
 	"maunium.net/go/mautrix/crypto/goolm"
@@ -157,8 +158,10 @@ func (r Ratchet) SessionSharingMessage(key crypto.Ed25519KeyPair) ([]byte, error
 	m := message.MegolmSessionSharing{}
 	m.Counter = r.Counter
 	m.RatchetData = r.Data
-	encoded := m.EncodeAndSign(key)
-	return goolm.Base64Encode(encoded), nil
+	message := m.EncodeAndSign(key)
+	encoded := make([]byte, base64.RawStdEncoding.EncodedLen(len(message)))
+	base64.RawStdEncoding.Encode(encoded, message)
+	return encoded, nil
 }
 
 // SessionExportMessage creates a message in the session export format.
@@ -167,8 +170,10 @@ func (r Ratchet) SessionExportMessage(key crypto.Ed25519PublicKey) ([]byte, erro
 	m.Counter = r.Counter
 	m.RatchetData = r.Data
 	m.PublicKey = key
-	encoded := m.Encode()
-	return goolm.Base64Encode(encoded), nil
+	message := m.Encode()
+	encoded := make([]byte, base64.RawStdEncoding.EncodedLen(len(message)))
+	base64.RawStdEncoding.Encode(encoded, message)
+	return encoded, nil
 }
 
 // Decrypt decrypts the ciphertext and verifies the MAC but not the signature.

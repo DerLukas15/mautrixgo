@@ -2,8 +2,8 @@ package pk
 
 import (
 	"crypto/rand"
+	"encoding/base64"
 
-	"maunium.net/go/mautrix/crypto/goolm"
 	"maunium.net/go/mautrix/crypto/goolm/crypto"
 	"maunium.net/go/mautrix/id"
 )
@@ -35,7 +35,9 @@ func NewSigning() (*Signing, error) {
 // Sign returns the signature of the message base64 encoded.
 func (s Signing) Sign(message []byte) []byte {
 	signature := s.KeyPair.Sign(message)
-	return goolm.Base64Encode(signature)
+	encoded := make([]byte, base64.RawStdEncoding.EncodedLen(len(signature)))
+	base64.RawStdEncoding.Encode(encoded, signature)
+	return encoded
 }
 
 // PublicKey returns the public key of the key pair base 64 encoded.

@@ -117,10 +117,12 @@ func NewOutboundOlmSession(identityKeyAlice crypto.Curve25519KeyPair, identityKe
 
 // NewInboundOlmSession creates a new inbound session from receiving the first message.
 func NewInboundOlmSession(identityKeyAlice *crypto.Curve25519PublicKey, receivedOTKMsg []byte, searchBobOTK SearchOTKFunc, identityKeyBob crypto.Curve25519KeyPair) (*OlmSession, error) {
-	decodedOTKMsg, err := goolm.Base64Decode(receivedOTKMsg)
+	decoded := make([]byte, base64.RawStdEncoding.DecodedLen(len(receivedOTKMsg)))
+	writtenBytes, err := base64.RawStdEncoding.Decode(decoded, receivedOTKMsg)
 	if err != nil {
 		return nil, err
 	}
+	decodedOTKMsg := decoded[:writtenBytes]
 	s := NewOlmSession()
 
 	//decode OneTimeKeyMessage
@@ -210,8 +212,9 @@ func (s OlmSession) ID() id.SessionID {
 	copy(message[crypto.Curve25519KeyLength:], s.AliceBaseKey)
 	copy(message[2*crypto.Curve25519KeyLength:], s.BobOneTimeKey)
 	hash := crypto.SHA256(message)
-	res := id.SessionID(goolm.Base64Encode(hash))
-	return res
+	encoded := make([]byte, base64.RawStdEncoding.EncodedLen(len(hash)))
+	base64.RawStdEncoding.Encode(encoded, hash)
+	return id.SessionID(encoded)
 }
 
 // HasReceivedMessage returns true if this session has received any message.
@@ -227,10 +230,12 @@ func (s OlmSession) MatchesInboundSessionFrom(theirIdentityKeyEncoded *id.Curve2
 	if len(receivedOTKMsg) == 0 {
 		return false, fmt.Errorf("inbound match: %w", goolm.ErrEmptyInput)
 	}
-	decodedOTKMsg, err := goolm.Base64Decode(receivedOTKMsg)
+	decoded := make([]byte, base64.RawStdEncoding.DecodedLen(len(receivedOTKMsg)))
+	writtenBytes, err := base64.RawStdEncoding.Decode(decoded, receivedOTKMsg)
 	if err != nil {
 		return false, err
 	}
+	decodedOTKMsg := decoded[:writtenBytes]
 
 	var theirIdentityKey *crypto.Curve25519PublicKey
 	if theirIdentityKeyEncoded != nil {
@@ -299,8 +304,9 @@ func (s *OlmSession) Encrypt(plaintext []byte, reader io.Reader) (id.OlmMsgType,
 		}
 		result = messageBody
 	}
-
-	return messageType, goolm.Base64Encode(result), nil
+	encoded := make([]byte, base64.RawStdEncoding.EncodedLen(len(result)))
+	base64.RawStdEncoding.Encode(encoded, result)
+	return messageType, encoded, nil
 }
 
 // Decrypt decrypts a base64 encoded message using the Session.
@@ -308,10 +314,12 @@ func (s *OlmSession) Decrypt(crypttext []byte, msgType id.OlmMsgType) ([]byte, e
 	if len(crypttext) == 0 {
 		return nil, fmt.Errorf("decrypt: %w", goolm.ErrEmptyInput)
 	}
-	decodedCrypttext, err := goolm.Base64Decode(crypttext)
+	decoded := make([]byte, base64.RawStdEncoding.DecodedLen(len(crypttext)))
+	writtenBytes, err := base64.RawStdEncoding.Decode(decoded, crypttext)
 	if err != nil {
 		return nil, err
 	}
+	decodedCrypttext := decoded[:writtenBytes]
 	msgBody := decodedCrypttext
 	if msgType != id.OlmMsgTypeMsg {
 		//Pre-Key Message

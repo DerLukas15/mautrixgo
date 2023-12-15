@@ -67,7 +67,9 @@ func (o *MegolmOutboundSession) Encrypt(plaintext []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return goolm.Base64Encode(encrypted), nil
+	encoded := make([]byte, base64.RawStdEncoding.EncodedLen(len(encrypted)))
+	base64.RawStdEncoding.Encode(encoded, encrypted)
+	return encoded, nil
 }
 
 // SessionID returns the base64 endoded public signing key

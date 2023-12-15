@@ -2,9 +2,9 @@
 package sas
 
 import (
+	"encoding/base64"
 	"io"
 
-	"maunium.net/go/mautrix/crypto/goolm"
 	"maunium.net/go/mautrix/crypto/goolm/crypto"
 )
 
@@ -28,15 +28,19 @@ func New() (*SAS, error) {
 
 // GetPubkey returns the public key of the key pair base64 encoded
 func (s SAS) GetPubkey() []byte {
-	return goolm.Base64Encode(s.KeyPair.PublicKey)
+	encoded := make([]byte, base64.RawStdEncoding.EncodedLen(len(s.KeyPair.PublicKey)))
+	base64.RawStdEncoding.Encode(encoded, s.KeyPair.PublicKey)
+	return encoded
 }
 
 // SetTheirKey sets the key of the other party and computes the shared secret.
 func (s *SAS) SetTheirKey(key []byte) error {
-	keyDecoded, err := goolm.Base64Decode(key)
+	decoded := make([]byte, base64.RawStdEncoding.DecodedLen(len(key)))
+	writtenBytes, err := base64.RawStdEncoding.Decode(decoded, key)
 	if err != nil {
 		return err
 	}
+	keyDecoded := decoded[:writtenBytes]
 	sharedSecret, err := s.KeyPair.SharedSecret(keyDecoded)
 	if err != nil {
 		return err
@@ -62,7 +66,9 @@ func (s *SAS) calculateMAC(input, info []byte, length uint) ([]byte, error) {
 		return nil, err
 	}
 	mac := crypto.HMACSHA256(key, input)
-	return goolm.Base64Encode(mac), nil
+	encoded := make([]byte, base64.RawStdEncoding.EncodedLen(len(mac)))
+	base64.RawStdEncoding.Encode(encoded, mac)
+	return encoded, nil
 }
 
 // CalculateMACFixes returns a base64 encoded, 32 byte long MAC of input.

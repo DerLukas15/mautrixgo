@@ -30,11 +30,12 @@ type MegolmInboundSession struct {
 
 // NewMegolmInboundSession creates a new MegolmInboundSession from a base64 encoded session sharing message.
 func NewMegolmInboundSession(input []byte) (*MegolmInboundSession, error) {
-	var err error
-	input, err = goolm.Base64Decode(input)
+	decoded := make([]byte, base64.RawStdEncoding.DecodedLen(len(input)))
+	writtenBytes, err := base64.RawStdEncoding.Decode(decoded, input)
 	if err != nil {
 		return nil, err
 	}
+	input = decoded[:writtenBytes]
 	msg := message.MegolmSessionSharing{}
 	err = msg.VerifyAndDecode(input)
 	if err != nil {
@@ -54,11 +55,12 @@ func NewMegolmInboundSession(input []byte) (*MegolmInboundSession, error) {
 
 // NewMegolmInboundSessionFromExport creates a new MegolmInboundSession from a base64 encoded session export message.
 func NewMegolmInboundSessionFromExport(input []byte) (*MegolmInboundSession, error) {
-	var err error
-	input, err = goolm.Base64Decode(input)
+	decoded := make([]byte, base64.RawStdEncoding.DecodedLen(len(input)))
+	writtenBytes, err := base64.RawStdEncoding.Decode(decoded, input)
 	if err != nil {
 		return nil, err
 	}
+	input = decoded[:writtenBytes]
 	msg := message.MegolmSessionExport{}
 	err = msg.Decode(input)
 	if err != nil {
@@ -111,7 +113,12 @@ func (o *MegolmInboundSession) Decrypt(ciphertext []byte) ([]byte, uint32, error
 	if o.SigningKey == nil {
 		return nil, 0, fmt.Errorf("decrypt: %w", goolm.ErrBadMessageFormat)
 	}
-	decoded, err := goolm.Base64Decode(ciphertext)
+	decoded := make([]byte, base64.RawStdEncoding.DecodedLen(len(ciphertext)))
+	writtenBytes, err := base64.RawStdEncoding.Decode(decoded, ciphertext)
+	if err != nil {
+		return nil, 0, err
+	}
+	decoded = decoded[:writtenBytes]
 	if err != nil {
 		return nil, 0, err
 	}
