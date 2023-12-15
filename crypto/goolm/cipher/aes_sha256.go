@@ -52,7 +52,7 @@ func NewAESSHA256(kdfInfo []byte) *AESSHA256 {
 }
 
 // Encrypt encrypts the plaintext with the key. The key is used to derive the actual encryption key (32 bytes) as well as the iv (16 bytes).
-func (c AESSHA256) Encrypt(key, plaintext []byte) (ciphertext []byte, err error) {
+func (c *AESSHA256) Encrypt(key, plaintext []byte) (ciphertext []byte, err error) {
 	keys, err := deriveAESKeys(c.kdfInfo, key)
 	if err != nil {
 		return nil, err
@@ -65,7 +65,7 @@ func (c AESSHA256) Encrypt(key, plaintext []byte) (ciphertext []byte, err error)
 }
 
 // Decrypt decrypts the ciphertext with the key. The key is used to derive the actual encryption key (32 bytes) as well as the iv (16 bytes).
-func (c AESSHA256) Decrypt(key, ciphertext []byte) (plaintext []byte, err error) {
+func (c *AESSHA256) Decrypt(key, ciphertext []byte) (plaintext []byte, err error) {
 	keys, err := deriveAESKeys(c.kdfInfo, key)
 	if err != nil {
 		return nil, err
@@ -78,7 +78,7 @@ func (c AESSHA256) Decrypt(key, ciphertext []byte) (plaintext []byte, err error)
 }
 
 // MAC returns the MAC for the message using the key. The key is used to derive the actual mac key (32 bytes).
-func (c AESSHA256) MAC(key, message []byte) ([]byte, error) {
+func (c *AESSHA256) MAC(key, message []byte) ([]byte, error) {
 	keys, err := deriveAESKeys(c.kdfInfo, key)
 	if err != nil {
 		return nil, err
@@ -87,7 +87,7 @@ func (c AESSHA256) MAC(key, message []byte) ([]byte, error) {
 }
 
 // Verify checks the MAC of the message using the key against the givenMAC. The key is used to derive the actual mac key (32 bytes).
-func (c AESSHA256) Verify(key, message, givenMAC []byte) (bool, error) {
+func (c *AESSHA256) Verify(key, message, givenMAC []byte) (bool, error) {
 	mac, err := c.MAC(key, message)
 	if err != nil {
 		return false, err

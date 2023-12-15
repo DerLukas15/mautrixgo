@@ -24,17 +24,17 @@ type Message struct {
 }
 
 // Decodes decodes the input and populates the corresponding fileds. MAC is ignored but has to be present.
-func (r *Message) Decode(input []byte) error {
-	r.Version = 0
-	r.HasCounter = false
-	r.Counter = 0
-	r.RatchetKey = nil
-	r.Ciphertext = nil
+func (m *Message) Decode(input []byte) error {
+	m.Version = 0
+	m.HasCounter = false
+	m.Counter = 0
+	m.RatchetKey = nil
+	m.Ciphertext = nil
 	if len(input) == 0 {
 		return nil
 	}
 	//first Byte is always version
-	r.Version = input[0]
+	m.Version = input[0]
 	curPos := 1
 	for curPos < len(input)-countMACBytesMessage {
 		//Read Key
@@ -52,8 +52,8 @@ func (r *Message) Decode(input []byte) error {
 			curPos += readBytes
 			switch curKey {
 			case counterTag:
-				r.HasCounter = true
-				r.Counter = value
+				m.HasCounter = true
+				m.Counter = value
 			}
 		} else if (curKey & 0b111) == 2 {
 			//The value is of type string
@@ -64,9 +64,9 @@ func (r *Message) Decode(input []byte) error {
 			curPos += readBytes
 			switch curKey {
 			case ratchetKeyTag:
-				r.RatchetKey = value
+				m.RatchetKey = value
 			case cipherTextKeyTag:
-				r.Ciphertext = value
+				m.Ciphertext = value
 			}
 		}
 	}
@@ -76,31 +76,31 @@ func (r *Message) Decode(input []byte) error {
 
 // EncodeAndMAC encodes the message and creates the MAC with the key and the cipher.
 // If key or cipher is nil, no MAC is appended.
-func (r *Message) EncodeAndMAC(key []byte, cipher cipher.Cipher) ([]byte, error) {
+func (m *Message) EncodeAndMAC(key []byte, cipher cipher.Cipher) ([]byte, error) {
 	var lengthOfMessage int
 	lengthOfMessage += 1 //Version
-	lengthOfMessage += encodeVarIntByteLength(ratchetKeyTag) + encodeVarStringByteLength(r.RatchetKey)
-	lengthOfMessage += encodeVarIntByteLength(counterTag) + encodeVarIntByteLength(r.Counter)
-	lengthOfMessage += encodeVarIntByteLength(cipherTextKeyTag) + encodeVarStringByteLength(r.Ciphertext)
+	lengthOfMessage += encodeVarIntByteLength(ratchetKeyTag) + encodeVarStringByteLength(m.RatchetKey)
+	lengthOfMessage += encodeVarIntByteLength(counterTag) + encodeVarIntByteLength(m.Counter)
+	lengthOfMessage += encodeVarIntByteLength(cipherTextKeyTag) + encodeVarStringByteLength(m.Ciphertext)
 	out := make([]byte, lengthOfMessage)
-	out[0] = r.Version
+	out[0] = m.Version
 	curPos := 1
 	encodedTag := encodeVarInt(ratchetKeyTag)
 	copy(out[curPos:], encodedTag)
 	curPos += len(encodedTag)
-	encodedValue := encodeVarString(r.RatchetKey)
+	encodedValue := encodeVarString(m.RatchetKey)
 	copy(out[curPos:], encodedValue)
 	curPos += len(encodedValue)
 	encodedTag = encodeVarInt(counterTag)
 	copy(out[curPos:], encodedTag)
 	curPos += len(encodedTag)
-	encodedValue = encodeVarInt(r.Counter)
+	encodedValue = encodeVarInt(m.Counter)
 	copy(out[curPos:], encodedValue)
 	curPos += len(encodedValue)
 	encodedTag = encodeVarInt(cipherTextKeyTag)
 	copy(out[curPos:], encodedTag)
 	curPos += len(encodedTag)
-	encodedValue = encodeVarString(r.Ciphertext)
+	encodedValue = encodeVarString(m.Ciphertext)
 	copy(out[curPos:], encodedValue)
 	curPos += len(encodedValue)
 	if len(key) != 0 && cipher != nil {
@@ -114,7 +114,7 @@ func (r *Message) EncodeAndMAC(key []byte, cipher cipher.Cipher) ([]byte, error)
 }
 
 // VerifyMAC verifies the givenMAC to the calculated MAC of the message.
-func (r *Message) VerifyMAC(key []byte, cipher cipher.Cipher, message, givenMAC []byte) (bool, error) {
+func (m *Message) VerifyMAC(key []byte, cipher cipher.Cipher, message, givenMAC []byte) (bool, error) {
 	checkMAC, err := cipher.MAC(key, message)
 	if err != nil {
 		return false, err
@@ -123,7 +123,7 @@ func (r *Message) VerifyMAC(key []byte, cipher cipher.Cipher, message, givenMAC 
 }
 
 // VerifyMACInline verifies the MAC taken from the message to the calculated MAC of the message.
-func (r *Message) VerifyMACInline(key []byte, cipher cipher.Cipher, message []byte) (bool, error) {
+func (m *Message) VerifyMACInline(key []byte, cipher cipher.Cipher, message []byte) (bool, error) {
 	givenMAC := message[len(message)-countMACBytesMessage:]
-	return r.VerifyMAC(key, cipher, message[:len(message)-countMACBytesMessage], givenMAC)
+	return m.VerifyMAC(key, cipher, message[:len(message)-countMACBytesMessage], givenMAC)
 }

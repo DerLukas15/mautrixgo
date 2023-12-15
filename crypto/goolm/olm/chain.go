@@ -20,20 +20,20 @@ type chainKey struct {
 }
 
 // advance advances the chain
-func (c *chainKey) advance() {
-	c.Key = crypto.HMACSHA256(c.Key, []byte{chainKeySeed})
-	c.Index++
+func (ck *chainKey) advance() {
+	ck.Key = crypto.HMACSHA256(ck.Key, []byte{chainKeySeed})
+	ck.Index++
 }
 
 // UnpickleLibOlm decodes the unencryted value and populates the chain key accordingly. It returns the number of bytes read.
-func (r *chainKey) UnpickleLibOlm(value []byte) (int, error) {
+func (ck *chainKey) UnpickleLibOlm(value []byte) (int, error) {
 	curPos := 0
-	readBytes, err := r.Key.UnpickleLibOlm(value)
+	readBytes, err := ck.Key.UnpickleLibOlm(value)
 	if err != nil {
 		return 0, err
 	}
 	curPos += readBytes
-	r.Index, readBytes, err = libolmpickle.UnpickleUInt32(value[curPos:])
+	ck.Index, readBytes, err = libolmpickle.UnpickleUInt32(value[curPos:])
 	if err != nil {
 		return 0, err
 	}
@@ -43,22 +43,22 @@ func (r *chainKey) UnpickleLibOlm(value []byte) (int, error) {
 
 // PickleLibOlm encodes the chain key into target. target has to have a size of at least PickleLen() and is written to from index 0.
 // It returns the number of bytes written.
-func (r chainKey) PickleLibOlm(target []byte) (int, error) {
-	if len(target) < r.PickleLen() {
+func (ck *chainKey) PickleLibOlm(target []byte) (int, error) {
+	if len(target) < ck.PickleLen() {
 		return 0, fmt.Errorf("pickle chain key: %w", goolm.ErrValueTooShort)
 	}
-	written, err := r.Key.PickleLibOlm(target)
+	written, err := ck.Key.PickleLibOlm(target)
 	if err != nil {
 		return 0, fmt.Errorf("pickle chain key: %w", err)
 	}
-	written += libolmpickle.PickleUInt32(r.Index, target[written:])
+	written += libolmpickle.PickleUInt32(ck.Index, target[written:])
 	return written, nil
 }
 
 // PickleLen returns the number of bytes the pickled chain key will have.
-func (r chainKey) PickleLen() int {
-	length := r.Key.PickleLen()
-	length += libolmpickle.PickleUInt32Len(r.Index)
+func (ck *chainKey) PickleLen() int {
+	length := ck.Key.PickleLen()
+	length += libolmpickle.PickleUInt32Len(ck.Index)
 	return length
 }
 
@@ -82,29 +82,29 @@ func newSenderChain(key crypto.Curve25519PublicKey, ratchet crypto.Curve25519Key
 }
 
 // advance advances the chain
-func (s *senderChain) advance() {
-	s.CKey.advance()
+func (sc *senderChain) advance() {
+	sc.CKey.advance()
 }
 
 // ratchetKey returns the ratchet key pair.
-func (s senderChain) ratchetKey() crypto.Curve25519KeyPair {
-	return s.RKey
+func (sc *senderChain) ratchetKey() crypto.Curve25519KeyPair {
+	return sc.RKey
 }
 
 // chainKey returns the current chainKey.
-func (s senderChain) chainKey() chainKey {
-	return s.CKey
+func (sc *senderChain) chainKey() chainKey {
+	return sc.CKey
 }
 
 // UnpickleLibOlm decodes the unencryted value and populates the chain accordingly. It returns the number of bytes read.
-func (r *senderChain) UnpickleLibOlm(value []byte) (int, error) {
+func (sc *senderChain) UnpickleLibOlm(value []byte) (int, error) {
 	curPos := 0
-	readBytes, err := r.RKey.UnpickleLibOlm(value)
+	readBytes, err := sc.RKey.UnpickleLibOlm(value)
 	if err != nil {
 		return 0, err
 	}
 	curPos += readBytes
-	readBytes, err = r.CKey.UnpickleLibOlm(value[curPos:])
+	readBytes, err = sc.CKey.UnpickleLibOlm(value[curPos:])
 	if err != nil {
 		return 0, err
 	}
@@ -114,15 +114,15 @@ func (r *senderChain) UnpickleLibOlm(value []byte) (int, error) {
 
 // PickleLibOlm encodes the chain into target. target has to have a size of at least PickleLen() and is written to from index 0.
 // It returns the number of bytes written.
-func (r senderChain) PickleLibOlm(target []byte) (int, error) {
-	if len(target) < r.PickleLen() {
+func (sc *senderChain) PickleLibOlm(target []byte) (int, error) {
+	if len(target) < sc.PickleLen() {
 		return 0, fmt.Errorf("pickle sender chain: %w", goolm.ErrValueTooShort)
 	}
-	written, err := r.RKey.PickleLibOlm(target)
+	written, err := sc.RKey.PickleLibOlm(target)
 	if err != nil {
 		return 0, fmt.Errorf("pickle sender chain: %w", err)
 	}
-	writtenChain, err := r.CKey.PickleLibOlm(target[written:])
+	writtenChain, err := sc.CKey.PickleLibOlm(target[written:])
 	if err != nil {
 		return 0, fmt.Errorf("pickle sender chain: %w", err)
 	}
@@ -131,9 +131,9 @@ func (r senderChain) PickleLibOlm(target []byte) (int, error) {
 }
 
 // PickleLen returns the number of bytes the pickled chain will have.
-func (r senderChain) PickleLen() int {
-	length := r.RKey.PickleLen()
-	length += r.CKey.PickleLen()
+func (sc *senderChain) PickleLen() int {
+	length := sc.RKey.PickleLen()
+	length += sc.CKey.PickleLen()
 	return length
 }
 
@@ -155,29 +155,29 @@ func newReceiverChain(chain crypto.Curve25519PublicKey, ratchet crypto.Curve2551
 }
 
 // advance advances the chain
-func (s *receiverChain) advance() {
-	s.CKey.advance()
+func (rc *receiverChain) advance() {
+	rc.CKey.advance()
 }
 
 // ratchetKey returns the ratchet public key.
-func (s receiverChain) ratchetKey() crypto.Curve25519PublicKey {
-	return s.RKey
+func (rc *receiverChain) ratchetKey() crypto.Curve25519PublicKey {
+	return rc.RKey
 }
 
 // chainKey returns the current chainKey.
-func (s receiverChain) chainKey() chainKey {
-	return s.CKey
+func (rc *receiverChain) chainKey() chainKey {
+	return rc.CKey
 }
 
 // UnpickleLibOlm decodes the unencryted value and populates the chain accordingly. It returns the number of bytes read.
-func (r *receiverChain) UnpickleLibOlm(value []byte) (int, error) {
+func (rc *receiverChain) UnpickleLibOlm(value []byte) (int, error) {
 	curPos := 0
-	readBytes, err := r.RKey.UnpickleLibOlm(value)
+	readBytes, err := rc.RKey.UnpickleLibOlm(value)
 	if err != nil {
 		return 0, err
 	}
 	curPos += readBytes
-	readBytes, err = r.CKey.UnpickleLibOlm(value[curPos:])
+	readBytes, err = rc.CKey.UnpickleLibOlm(value[curPos:])
 	if err != nil {
 		return 0, err
 	}
@@ -187,15 +187,15 @@ func (r *receiverChain) UnpickleLibOlm(value []byte) (int, error) {
 
 // PickleLibOlm encodes the chain into target. target has to have a size of at least PickleLen() and is written to from index 0.
 // It returns the number of bytes written.
-func (r receiverChain) PickleLibOlm(target []byte) (int, error) {
-	if len(target) < r.PickleLen() {
+func (rc *receiverChain) PickleLibOlm(target []byte) (int, error) {
+	if len(target) < rc.PickleLen() {
 		return 0, fmt.Errorf("pickle sender chain: %w", goolm.ErrValueTooShort)
 	}
-	written, err := r.RKey.PickleLibOlm(target)
+	written, err := rc.RKey.PickleLibOlm(target)
 	if err != nil {
 		return 0, fmt.Errorf("pickle sender chain: %w", err)
 	}
-	writtenChain, err := r.CKey.PickleLibOlm(target)
+	writtenChain, err := rc.CKey.PickleLibOlm(target)
 	if err != nil {
 		return 0, fmt.Errorf("pickle sender chain: %w", err)
 	}
@@ -204,9 +204,9 @@ func (r receiverChain) PickleLibOlm(target []byte) (int, error) {
 }
 
 // PickleLen returns the number of bytes the pickled chain will have.
-func (r receiverChain) PickleLen() int {
-	length := r.RKey.PickleLen()
-	length += r.CKey.PickleLen()
+func (rc *receiverChain) PickleLen() int {
+	length := rc.RKey.PickleLen()
+	length += rc.CKey.PickleLen()
 	return length
 }
 
@@ -217,42 +217,42 @@ type messageKey struct {
 }
 
 // UnpickleLibOlm decodes the unencryted value and populates the message key accordingly. It returns the number of bytes read.
-func (m *messageKey) UnpickleLibOlm(value []byte) (int, error) {
+func (mk *messageKey) UnpickleLibOlm(value []byte) (int, error) {
 	curPos := 0
 	ratchetKey, readBytes, err := libolmpickle.UnpickleBytes(value, messageKeyLength)
 	if err != nil {
 		return 0, err
 	}
-	m.Key = ratchetKey
+	mk.Key = ratchetKey
 	curPos += readBytes
 	keyID, readBytes, err := libolmpickle.UnpickleUInt32(value[:curPos])
 	if err != nil {
 		return 0, err
 	}
 	curPos += readBytes
-	m.Index = keyID
+	mk.Index = keyID
 	return curPos, nil
 }
 
 // PickleLibOlm encodes the message key into target. target has to have a size of at least PickleLen() and is written to from index 0.
 // It returns the number of bytes written.
-func (m messageKey) PickleLibOlm(target []byte) (int, error) {
-	if len(target) < m.PickleLen() {
+func (mk *messageKey) PickleLibOlm(target []byte) (int, error) {
+	if len(target) < mk.PickleLen() {
 		return 0, fmt.Errorf("pickle message key: %w", goolm.ErrValueTooShort)
 	}
 	written := 0
-	if len(m.Key) != messageKeyLength {
+	if len(mk.Key) != messageKeyLength {
 		written += libolmpickle.PickleBytes(make([]byte, messageKeyLength), target)
 	} else {
-		written += libolmpickle.PickleBytes(m.Key, target)
+		written += libolmpickle.PickleBytes(mk.Key, target)
 	}
-	written += libolmpickle.PickleUInt32(m.Index, target[written:])
+	written += libolmpickle.PickleUInt32(mk.Index, target[written:])
 	return written, nil
 }
 
 // PickleLen returns the number of bytes the pickled message key will have.
-func (r messageKey) PickleLen() int {
+func (mk *messageKey) PickleLen() int {
 	length := libolmpickle.PickleBytesLen(make([]byte, messageKeyLength))
-	length += libolmpickle.PickleUInt32Len(r.Index)
+	length += libolmpickle.PickleUInt32Len(mk.Index)
 	return length
 }

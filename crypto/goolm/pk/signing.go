@@ -33,7 +33,7 @@ func NewSigning() (*Signing, error) {
 }
 
 // Sign returns the signature of the message base64 encoded.
-func (s Signing) Sign(message []byte) []byte {
+func (s *Signing) Sign(message []byte) []byte {
 	signature := s.KeyPair.Sign(message)
 	encoded := make([]byte, base64.RawStdEncoding.EncodedLen(len(signature)))
 	base64.RawStdEncoding.Encode(encoded, signature)
@@ -41,6 +41,6 @@ func (s Signing) Sign(message []byte) []byte {
 }
 
 // PublicKey returns the public key of the key pair base 64 encoded.
-func (s Signing) PublicKey() id.Ed25519 {
+func (s *Signing) PublicKey() id.Ed25519 {
 	return s.KeyPair.B64Encoded()
 }

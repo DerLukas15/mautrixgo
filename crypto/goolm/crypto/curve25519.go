@@ -65,18 +65,18 @@ type Curve25519KeyPair struct {
 }
 
 // B64Encoded returns a base64 encoded string of the public key.
-func (c Curve25519KeyPair) B64Encoded() id.Curve25519 {
+func (c *Curve25519KeyPair) B64Encoded() id.Curve25519 {
 	return c.PublicKey.B64Encoded()
 }
 
 // SharedSecret returns the shared secret between the key pair and the given public key.
-func (c Curve25519KeyPair) SharedSecret(pubKey Curve25519PublicKey) ([]byte, error) {
+func (c *Curve25519KeyPair) SharedSecret(pubKey Curve25519PublicKey) ([]byte, error) {
 	return c.PrivateKey.SharedSecret(pubKey)
 }
 
 // PickleLibOlm encodes the key pair into target. target has to have a size of at least PickleLen() and is written to from index 0.
 // It returns the number of bytes written.
-func (c Curve25519KeyPair) PickleLibOlm(target []byte) (int, error) {
+func (c *Curve25519KeyPair) PickleLibOlm(target []byte) (int, error) {
 	if len(target) < c.PickleLen() {
 		return 0, fmt.Errorf("pickle curve25519 key pair: %w", goolm.ErrValueTooShort)
 	}
@@ -109,7 +109,7 @@ func (c *Curve25519KeyPair) UnpickleLibOlm(value []byte) (int, error) {
 }
 
 // PickleLen returns the number of bytes the pickled key pair will have.
-func (c Curve25519KeyPair) PickleLen() int {
+func (c *Curve25519KeyPair) PickleLen() int {
 	lenPublic := c.PublicKey.PickleLen()
 	var lenPrivate int
 	if len(c.PrivateKey) != Curve25519KeyLength {

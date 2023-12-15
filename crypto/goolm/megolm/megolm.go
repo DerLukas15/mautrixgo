@@ -62,20 +62,20 @@ func NewWithRandom(counter uint32) (*Ratchet, error) {
 }
 
 // rehashPart rehases the part of the ratchet data with the base defined as from storing into the target to.
-func (m *Ratchet) rehashPart(from, to int) {
-	newData := crypto.HMACSHA256(m.Data[from*RatchetPartLength:from*RatchetPartLength+RatchetPartLength], hashKeySeeds[to])
-	copy(m.Data[to*RatchetPartLength:], newData[:RatchetPartLength])
+func (r *Ratchet) rehashPart(from, to int) {
+	newData := crypto.HMACSHA256(r.Data[from*RatchetPartLength:from*RatchetPartLength+RatchetPartLength], hashKeySeeds[to])
+	copy(r.Data[to*RatchetPartLength:], newData[:RatchetPartLength])
 }
 
 // Advance advances the ratchet one step.
-func (m *Ratchet) Advance() {
+func (r *Ratchet) Advance() {
 	var mask uint32 = 0x00FFFFFF
 	var h int
-	m.Counter++
+	r.Counter++
 
 	// figure out how much we need to rekey
 	for h < RatchetParts {
-		if (m.Counter & mask) == 0 {
+		if (r.Counter & mask) == 0 {
 			break
 		}
 		h++
@@ -84,12 +84,12 @@ func (m *Ratchet) Advance() {
 
 	// now update R(h)...R(3) based on R(h)
 	for i := RatchetParts - 1; i >= h; i-- {
-		m.rehashPart(h, i)
+		r.rehashPart(h, i)
 	}
 }
 
 // AdvanceTo advances the ratchet so that the ratchet counter = target
-func (m *Ratchet) AdvanceTo(target uint32) {
+func (r *Ratchet) AdvanceTo(target uint32) {
 	//starting with R0, see if we need to update each part of the hash
 	for j := 0; j < RatchetParts; j++ {
 		shift := uint32((RatchetParts - j - 1) * 8)
@@ -97,7 +97,7 @@ func (m *Ratchet) AdvanceTo(target uint32) {
 
 		// how many times do we need to rehash this part?
 		// '& 0xff' ensures we handle integer wraparound correctly
-		steps := ((target >> shift) - m.Counter>>shift) & uint32(0xff)
+		steps := ((target >> shift) - r.Counter>>shift) & uint32(0xff)
 
 		if steps == 0 {
 			/*
@@ -106,7 +106,7 @@ func (m *Ratchet) AdvanceTo(target uint32) {
 				that target has wrapped around and we need to advance R(0)
 				256 times.
 			*/
-			if target < m.Counter {
+			if target < r.Counter {
 				steps = 0x100
 			} else {
 				continue
@@ -114,7 +114,7 @@ func (m *Ratchet) AdvanceTo(target uint32) {
 		}
 		//	for all but the last step, we can just bump R(j) without regard to R(j+1)...R(3).
 		for steps > 1 {
-			m.rehashPart(j, j)
+			r.rehashPart(j, j)
 			steps--
 		}
 		/*
@@ -125,9 +125,9 @@ func (m *Ratchet) AdvanceTo(target uint32) {
 			doesn't save us much).
 		*/
 		for k := 3; k >= j; k-- {
-			m.rehashPart(j, k)
+			r.rehashPart(j, k)
 		}
-		m.Counter = target & mask
+		r.Counter = target & mask
 	}
 }
 
@@ -154,7 +154,7 @@ func (r *Ratchet) Encrypt(plaintext []byte, key *crypto.Ed25519KeyPair) ([]byte,
 }
 
 // SessionSharingMessage creates a message in the session sharing format.
-func (r Ratchet) SessionSharingMessage(key crypto.Ed25519KeyPair) ([]byte, error) {
+func (r *Ratchet) SessionSharingMessage(key crypto.Ed25519KeyPair) ([]byte, error) {
 	m := message.MegolmSessionSharing{}
 	m.Counter = r.Counter
 	m.RatchetData = r.Data
@@ -165,7 +165,7 @@ func (r Ratchet) SessionSharingMessage(key crypto.Ed25519KeyPair) ([]byte, error
 }
 
 // SessionExportMessage creates a message in the session export format.
-func (r Ratchet) SessionExportMessage(key crypto.Ed25519PublicKey) ([]byte, error) {
+func (r *Ratchet) SessionExportMessage(key crypto.Ed25519PublicKey) ([]byte, error) {
 	m := message.MegolmSessionExport{}
 	m.Counter = r.Counter
 	m.RatchetData = r.Data
@@ -177,7 +177,7 @@ func (r Ratchet) SessionExportMessage(key crypto.Ed25519PublicKey) ([]byte, erro
 }
 
 // Decrypt decrypts the ciphertext and verifies the MAC but not the signature.
-func (r Ratchet) Decrypt(ciphertext []byte, signingkey *crypto.Ed25519PublicKey, msg *message.GroupMessage) ([]byte, error) {
+func (r *Ratchet) Decrypt(ciphertext []byte, signingkey *crypto.Ed25519PublicKey, msg *message.GroupMessage) ([]byte, error) {
 	//verify mac
 	verifiedMAC, err := msg.VerifyMACInline(r.Data[:], RatchetCipher, ciphertext)
 	if err != nil {
@@ -191,7 +191,7 @@ func (r Ratchet) Decrypt(ciphertext []byte, signingkey *crypto.Ed25519PublicKey,
 }
 
 // PickleAsJSON returns a ratchet as a base64 string encrypted using the supplied key. The unencrypted representation of the Account is in JSON format.
-func (r Ratchet) PickleAsJSON(key []byte) ([]byte, error) {
+func (r *Ratchet) PickleAsJSON(key []byte) ([]byte, error) {
 	return utilities.PickleAsJSON(r, megolmPickleVersion, key)
 }
 
@@ -222,7 +222,7 @@ func (r *Ratchet) UnpickleLibOlm(unpickled []byte) (int, error) {
 
 // PickleLibOlm encodes the ratchet into target. target has to have a size of at least PickleLen() and is written to from index 0.
 // It returns the number of bytes written.
-func (r Ratchet) PickleLibOlm(target []byte) (int, error) {
+func (r *Ratchet) PickleLibOlm(target []byte) (int, error) {
 	if len(target) < r.PickleLen() {
 		return 0, fmt.Errorf("pickle account: %w", goolm.ErrValueTooShort)
 	}
@@ -232,7 +232,7 @@ func (r Ratchet) PickleLibOlm(target []byte) (int, error) {
 }
 
 // PickleLen returns the number of bytes the pickled ratchet will have.
-func (r Ratchet) PickleLen() int {
+func (r *Ratchet) PickleLen() int {
 	length := libolmpickle.PickleBytesLen(r.Data[:])
 	length += libolmpickle.PickleUInt32Len(r.Counter)
 	return length

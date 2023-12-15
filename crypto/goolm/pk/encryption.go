@@ -26,7 +26,7 @@ func NewEncryption(pubKey id.Curve25519) (*Encryption, error) {
 }
 
 // Encrypt encrypts the plaintext with the privateKey and returns the ciphertext and base64 encoded MAC.
-func (e Encryption) Encrypt(plaintext []byte, privateKey crypto.Curve25519PrivateKey) (ciphertext, mac []byte, err error) {
+func (e *Encryption) Encrypt(plaintext []byte, privateKey crypto.Curve25519PrivateKey) (ciphertext, mac []byte, err error) {
 	keyPair, err := crypto.Curve25519GenerateFromPrivate(privateKey)
 	if err != nil {
 		return nil, nil, err

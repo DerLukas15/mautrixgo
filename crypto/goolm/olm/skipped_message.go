@@ -14,14 +14,14 @@ type skippedMessageKey struct {
 }
 
 // UnpickleLibOlm decodes the unencryted value and populates the chain accordingly. It returns the number of bytes read.
-func (r *skippedMessageKey) UnpickleLibOlm(value []byte) (int, error) {
+func (smk *skippedMessageKey) UnpickleLibOlm(value []byte) (int, error) {
 	curPos := 0
-	readBytes, err := r.RKey.UnpickleLibOlm(value)
+	readBytes, err := smk.RKey.UnpickleLibOlm(value)
 	if err != nil {
 		return 0, err
 	}
 	curPos += readBytes
-	readBytes, err = r.MKey.UnpickleLibOlm(value[curPos:])
+	readBytes, err = smk.MKey.UnpickleLibOlm(value[curPos:])
 	if err != nil {
 		return 0, err
 	}
@@ -31,15 +31,15 @@ func (r *skippedMessageKey) UnpickleLibOlm(value []byte) (int, error) {
 
 // PickleLibOlm encodes the chain into target. target has to have a size of at least PickleLen() and is written to from index 0.
 // It returns the number of bytes written.
-func (r skippedMessageKey) PickleLibOlm(target []byte) (int, error) {
-	if len(target) < r.PickleLen() {
+func (smk *skippedMessageKey) PickleLibOlm(target []byte) (int, error) {
+	if len(target) < smk.PickleLen() {
 		return 0, fmt.Errorf("pickle sender chain: %w", goolm.ErrValueTooShort)
 	}
-	written, err := r.RKey.PickleLibOlm(target)
+	written, err := smk.RKey.PickleLibOlm(target)
 	if err != nil {
 		return 0, fmt.Errorf("pickle sender chain: %w", err)
 	}
-	writtenChain, err := r.MKey.PickleLibOlm(target)
+	writtenChain, err := smk.MKey.PickleLibOlm(target)
 	if err != nil {
 		return 0, fmt.Errorf("pickle sender chain: %w", err)
 	}
@@ -48,8 +48,8 @@ func (r skippedMessageKey) PickleLibOlm(target []byte) (int, error) {
 }
 
 // PickleLen returns the number of bytes the pickled chain will have.
-func (r skippedMessageKey) PickleLen() int {
-	length := r.RKey.PickleLen()
-	length += r.MKey.PickleLen()
+func (smk *skippedMessageKey) PickleLen() int {
+	length := smk.RKey.PickleLen()
+	length += smk.MKey.PickleLen()
 	return length
 }

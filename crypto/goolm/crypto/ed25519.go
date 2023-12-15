@@ -52,23 +52,23 @@ type Ed25519KeyPair struct {
 }
 
 // B64Encoded returns a base64 encoded string of the public key.
-func (c Ed25519KeyPair) B64Encoded() id.Ed25519 {
+func (c *Ed25519KeyPair) B64Encoded() id.Ed25519 {
 	return id.Ed25519(base64.RawStdEncoding.EncodeToString(c.PublicKey))
 }
 
 // Sign returns the signature for the message.
-func (c Ed25519KeyPair) Sign(message []byte) []byte {
+func (c *Ed25519KeyPair) Sign(message []byte) []byte {
 	return c.PrivateKey.Sign(message)
 }
 
 // Verify checks the signature of the message against the givenSignature
-func (c Ed25519KeyPair) Verify(message, givenSignature []byte) bool {
+func (c *Ed25519KeyPair) Verify(message, givenSignature []byte) bool {
 	return c.PublicKey.Verify(message, givenSignature)
 }
 
 // PickleLibOlm encodes the key pair into target. target has to have a size of at least PickleLen() and is written to from index 0.
 // It returns the number of bytes written.
-func (c Ed25519KeyPair) PickleLibOlm(target []byte) (int, error) {
+func (c *Ed25519KeyPair) PickleLibOlm(target []byte) (int, error) {
 	if len(target) < c.PickleLen() {
 		return 0, fmt.Errorf("pickle ed25519 key pair: %w", goolm.ErrValueTooShort)
 	}
@@ -102,7 +102,7 @@ func (c *Ed25519KeyPair) UnpickleLibOlm(value []byte) (int, error) {
 }
 
 // PickleLen returns the number of bytes the pickled key pair will have.
-func (c Ed25519KeyPair) PickleLen() int {
+func (c *Ed25519KeyPair) PickleLen() int {
 	lenPublic := c.PublicKey.PickleLen()
 	var lenPrivate int
 	if len(c.PrivateKey) != ed25519.PrivateKeySize {

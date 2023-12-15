@@ -27,7 +27,7 @@ func New() (*SAS, error) {
 }
 
 // GetPubkey returns the public key of the key pair base64 encoded
-func (s SAS) GetPubkey() []byte {
+func (s *SAS) GetPubkey() []byte {
 	encoded := make([]byte, base64.RawStdEncoding.EncodedLen(len(s.KeyPair.PublicKey)))
 	base64.RawStdEncoding.Encode(encoded, s.KeyPair.PublicKey)
 	return encoded
@@ -50,7 +50,7 @@ func (s *SAS) SetTheirKey(key []byte) error {
 }
 
 // GenerateBytes creates length bytes from the shared secret and info.
-func (s SAS) GenerateBytes(info []byte, length uint) ([]byte, error) {
+func (s *SAS) GenerateBytes(info []byte, length uint) ([]byte, error) {
 	byteReader := crypto.HKDFSHA256(s.Secret, nil, info)
 	output := make([]byte, length)
 	if _, err := io.ReadFull(byteReader, output); err != nil {
@@ -72,11 +72,11 @@ func (s *SAS) calculateMAC(input, info []byte, length uint) ([]byte, error) {
 }
 
 // CalculateMACFixes returns a base64 encoded, 32 byte long MAC of input.
-func (s SAS) CalculateMAC(input, info []byte) ([]byte, error) {
+func (s *SAS) CalculateMAC(input, info []byte) ([]byte, error) {
 	return s.calculateMAC(input, info, 32)
 }
 
 // CalculateMACLongKDF returns a base64 encoded, 256 byte long MAC of input.
-func (s SAS) CalculateMACLongKDF(input, info []byte) ([]byte, error) {
+func (s *SAS) CalculateMACLongKDF(input, info []byte) ([]byte, error) {
 	return s.calculateMAC(input, info, 256)
 }

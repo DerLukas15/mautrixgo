@@ -20,17 +20,17 @@ type PreKeyMessage struct {
 }
 
 // Decodes decodes the input and populates the corresponding fileds.
-func (r *PreKeyMessage) Decode(input []byte) error {
-	r.Version = 0
-	r.IdentityKey = nil
-	r.BaseKey = nil
-	r.OneTimeKey = nil
-	r.Message = nil
+func (pkm *PreKeyMessage) Decode(input []byte) error {
+	pkm.Version = 0
+	pkm.IdentityKey = nil
+	pkm.BaseKey = nil
+	pkm.OneTimeKey = nil
+	pkm.Message = nil
 	if len(input) == 0 {
 		return nil
 	}
 	//first Byte is always version
-	r.Version = input[0]
+	pkm.Version = input[0]
 	curPos := 1
 	for curPos < len(input) {
 		//Read Key
@@ -55,13 +55,13 @@ func (r *PreKeyMessage) Decode(input []byte) error {
 			curPos += readBytes
 			switch curKey {
 			case oneTimeKeyIdTag:
-				r.OneTimeKey = value
+				pkm.OneTimeKey = value
 			case baseKeyTag:
-				r.BaseKey = value
+				pkm.BaseKey = value
 			case identityKeyTag:
-				r.IdentityKey = value
+				pkm.IdentityKey = value
 			case messageTag:
-				r.Message = value
+				pkm.Message = value
 			}
 		}
 	}
@@ -70,51 +70,51 @@ func (r *PreKeyMessage) Decode(input []byte) error {
 }
 
 // CheckField verifies the fields. If theirIdentityKey is nil, it is not compared to the key in the message.
-func (r *PreKeyMessage) CheckFields(theirIdentityKey *crypto.Curve25519PublicKey) bool {
+func (pkm *PreKeyMessage) CheckFields(theirIdentityKey *crypto.Curve25519PublicKey) bool {
 	ok := true
-	ok = ok && (theirIdentityKey != nil || r.IdentityKey != nil)
-	if r.IdentityKey != nil {
-		ok = ok && (len(r.IdentityKey) == crypto.Curve25519KeyLength)
+	ok = ok && (theirIdentityKey != nil || pkm.IdentityKey != nil)
+	if pkm.IdentityKey != nil {
+		ok = ok && (len(pkm.IdentityKey) == crypto.Curve25519KeyLength)
 	}
-	ok = ok && len(r.Message) != 0
-	ok = ok && len(r.BaseKey) == crypto.Curve25519KeyLength
-	ok = ok && len(r.OneTimeKey) == crypto.Curve25519KeyLength
+	ok = ok && len(pkm.Message) != 0
+	ok = ok && len(pkm.BaseKey) == crypto.Curve25519KeyLength
+	ok = ok && len(pkm.OneTimeKey) == crypto.Curve25519KeyLength
 	return ok
 }
 
 // Encode encodes the message.
-func (r *PreKeyMessage) Encode() ([]byte, error) {
+func (pkm *PreKeyMessage) Encode() ([]byte, error) {
 	var lengthOfMessage int
 	lengthOfMessage += 1 //Version
-	lengthOfMessage += encodeVarIntByteLength(oneTimeKeyIdTag) + encodeVarStringByteLength(r.OneTimeKey)
-	lengthOfMessage += encodeVarIntByteLength(identityKeyTag) + encodeVarStringByteLength(r.IdentityKey)
-	lengthOfMessage += encodeVarIntByteLength(baseKeyTag) + encodeVarStringByteLength(r.BaseKey)
-	lengthOfMessage += encodeVarIntByteLength(messageTag) + encodeVarStringByteLength(r.Message)
+	lengthOfMessage += encodeVarIntByteLength(oneTimeKeyIdTag) + encodeVarStringByteLength(pkm.OneTimeKey)
+	lengthOfMessage += encodeVarIntByteLength(identityKeyTag) + encodeVarStringByteLength(pkm.IdentityKey)
+	lengthOfMessage += encodeVarIntByteLength(baseKeyTag) + encodeVarStringByteLength(pkm.BaseKey)
+	lengthOfMessage += encodeVarIntByteLength(messageTag) + encodeVarStringByteLength(pkm.Message)
 	out := make([]byte, lengthOfMessage)
-	out[0] = r.Version
+	out[0] = pkm.Version
 	curPos := 1
 	encodedTag := encodeVarInt(oneTimeKeyIdTag)
 	copy(out[curPos:], encodedTag)
 	curPos += len(encodedTag)
-	encodedValue := encodeVarString(r.OneTimeKey)
+	encodedValue := encodeVarString(pkm.OneTimeKey)
 	copy(out[curPos:], encodedValue)
 	curPos += len(encodedValue)
 	encodedTag = encodeVarInt(identityKeyTag)
 	copy(out[curPos:], encodedTag)
 	curPos += len(encodedTag)
-	encodedValue = encodeVarString(r.IdentityKey)
+	encodedValue = encodeVarString(pkm.IdentityKey)
 	copy(out[curPos:], encodedValue)
 	curPos += len(encodedValue)
 	encodedTag = encodeVarInt(baseKeyTag)
 	copy(out[curPos:], encodedTag)
 	curPos += len(encodedTag)
-	encodedValue = encodeVarString(r.BaseKey)
+	encodedValue = encodeVarString(pkm.BaseKey)
 	copy(out[curPos:], encodedValue)
 	curPos += len(encodedValue)
 	encodedTag = encodeVarInt(messageTag)
 	copy(out[curPos:], encodedTag)
 	curPos += len(encodedTag)
-	encodedValue = encodeVarString(r.Message)
+	encodedValue = encodeVarString(pkm.Message)
 	copy(out[curPos:], encodedValue)
 	return out, nil
 }

@@ -46,22 +46,22 @@ func NewDecryptionFromPrivate(privateKey crypto.Curve25519PrivateKey) (*Decrypti
 }
 
 // PubKey returns the public key base 64 encoded.
-func (s Decryption) PubKey() id.Curve25519 {
-	return s.KeyPair.B64Encoded()
+func (d *Decryption) PubKey() id.Curve25519 {
+	return d.KeyPair.B64Encoded()
 }
 
 // PrivateKey returns the private key.
-func (s Decryption) PrivateKey() crypto.Curve25519PrivateKey {
-	return s.KeyPair.PrivateKey
+func (d *Decryption) PrivateKey() crypto.Curve25519PrivateKey {
+	return d.KeyPair.PrivateKey
 }
 
 // Decrypt decrypts the ciphertext and verifies the MAC. The base64 encoded key is used to construct the shared secret.
-func (s Decryption) Decrypt(ciphertext, mac []byte, key id.Curve25519) ([]byte, error) {
+func (d *Decryption) Decrypt(ciphertext, mac []byte, key id.Curve25519) ([]byte, error) {
 	keyDecoded, err := base64.RawStdEncoding.DecodeString(string(key))
 	if err != nil {
 		return nil, err
 	}
-	sharedSecret, err := s.KeyPair.SharedSecret(keyDecoded)
+	sharedSecret, err := d.KeyPair.SharedSecret(keyDecoded)
 	if err != nil {
 		return nil, err
 	}
@@ -87,28 +87,28 @@ func (s Decryption) Decrypt(ciphertext, mac []byte, key id.Curve25519) ([]byte, 
 }
 
 // PickleAsJSON returns an Decryption as a base64 string encrypted using the supplied key. The unencrypted representation of the Account is in JSON format.
-func (a Decryption) PickleAsJSON(key []byte) ([]byte, error) {
-	return utilities.PickleAsJSON(a, decryptionPickleVersionJSON, key)
+func (d *Decryption) PickleAsJSON(key []byte) ([]byte, error) {
+	return utilities.PickleAsJSON(d, decryptionPickleVersionJSON, key)
 }
 
 // UnpickleAsJSON updates an Decryption by a base64 encrypted string using the supplied key. The unencrypted representation has to be in JSON format.
-func (a *Decryption) UnpickleAsJSON(pickled, key []byte) error {
-	return utilities.UnpickleAsJSON(a, pickled, key, decryptionPickleVersionJSON)
+func (d *Decryption) UnpickleAsJSON(pickled, key []byte) error {
+	return utilities.UnpickleAsJSON(d, pickled, key, decryptionPickleVersionJSON)
 }
 
 // Unpickle decodes the base64 encoded string and decrypts the result with the key.
 // The decrypted value is then passed to UnpickleLibOlm.
-func (a *Decryption) Unpickle(pickled, key []byte) error {
+func (d *Decryption) Unpickle(pickled, key []byte) error {
 	decrypted, err := cipher.Unpickle(key, pickled)
 	if err != nil {
 		return err
 	}
-	_, err = a.UnpickleLibOlm(decrypted)
+	_, err = d.UnpickleLibOlm(decrypted)
 	return err
 }
 
 // UnpickleLibOlm decodes the unencryted value and populates the Decryption accordingly. It returns the number of bytes read.
-func (a *Decryption) UnpickleLibOlm(value []byte) (int, error) {
+func (d *Decryption) UnpickleLibOlm(value []byte) (int, error) {
 	//First 4 bytes are the accountPickleVersion
 	pickledVersion, curPos, err := libolmpickle.UnpickleUInt32(value)
 	if err != nil {
@@ -119,7 +119,7 @@ func (a *Decryption) UnpickleLibOlm(value []byte) (int, error) {
 	default:
 		return 0, fmt.Errorf("unpickle olmSession: %w", goolm.ErrBadVersion)
 	}
-	readBytes, err := a.KeyPair.UnpickleLibOlm(value[curPos:])
+	readBytes, err := d.KeyPair.UnpickleLibOlm(value[curPos:])
 	if err != nil {
 		return 0, err
 	}
@@ -128,9 +128,9 @@ func (a *Decryption) UnpickleLibOlm(value []byte) (int, error) {
 }
 
 // Pickle returns a base64 encoded and with key encrypted pickled Decryption using PickleLibOlm().
-func (a Decryption) Pickle(key []byte) ([]byte, error) {
-	pickeledBytes := make([]byte, a.PickleLen())
-	written, err := a.PickleLibOlm(pickeledBytes)
+func (d *Decryption) Pickle(key []byte) ([]byte, error) {
+	pickeledBytes := make([]byte, d.PickleLen())
+	written, err := d.PickleLibOlm(pickeledBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -146,12 +146,12 @@ func (a Decryption) Pickle(key []byte) ([]byte, error) {
 
 // PickleLibOlm encodes the Decryption into target. target has to have a size of at least PickleLen() and is written to from index 0.
 // It returns the number of bytes written.
-func (a Decryption) PickleLibOlm(target []byte) (int, error) {
-	if len(target) < a.PickleLen() {
+func (d *Decryption) PickleLibOlm(target []byte) (int, error) {
+	if len(target) < d.PickleLen() {
 		return 0, fmt.Errorf("pickle Decryption: %w", goolm.ErrValueTooShort)
 	}
 	written := libolmpickle.PickleUInt32(decryptionPickleVersionLibOlm, target)
-	writtenKey, err := a.KeyPair.PickleLibOlm(target[written:])
+	writtenKey, err := d.KeyPair.PickleLibOlm(target[written:])
 	if err != nil {
 		return 0, fmt.Errorf("pickle Decryption: %w", err)
 	}
@@ -160,8 +160,8 @@ func (a Decryption) PickleLibOlm(target []byte) (int, error) {
 }
 
 // PickleLen returns the number of bytes the pickled Decryption will have.
-func (a Decryption) PickleLen() int {
+func (d *Decryption) PickleLen() int {
 	length := libolmpickle.PickleUInt32Len(decryptionPickleVersionLibOlm)
-	length += a.KeyPair.PickleLen()
+	length += d.KeyPair.PickleLen()
 	return length
 }

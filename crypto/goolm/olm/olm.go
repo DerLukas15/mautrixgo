@@ -218,7 +218,7 @@ func (r *Ratchet) advanceRootKey(newRatchetKey crypto.Curve25519KeyPair, oldRatc
 }
 
 // createMessageKeys returns the messageKey derived from the chainKey
-func (r Ratchet) createMessageKeys(chainKey chainKey) messageKey {
+func (r *Ratchet) createMessageKeys(chainKey chainKey) messageKey {
 	res := messageKey{}
 	res.Key = crypto.HMACSHA256(chainKey.Key, []byte{messageKeySeed})
 	res.Index = chainKey.Index
@@ -289,7 +289,7 @@ func (r *Ratchet) decryptForNewChain(message *message.Message, rawMessage []byte
 }
 
 // PickleAsJSON returns a ratchet as a base64 string encrypted using the supplied key. The unencrypted representation of the Account is in JSON format.
-func (r Ratchet) PickleAsJSON(key []byte) ([]byte, error) {
+func (r *Ratchet) PickleAsJSON(key []byte) ([]byte, error) {
 	return utilities.PickleAsJSON(r, olmPickleVersion, key)
 }
 
@@ -369,7 +369,7 @@ func (r *Ratchet) UnpickleLibOlm(value []byte, includesChainIndex bool) (int, er
 
 // PickleLibOlm encodes the ratchet into target. target has to have a size of at least PickleLen() and is written to from index 0.
 // It returns the number of bytes written.
-func (r Ratchet) PickleLibOlm(target []byte) (int, error) {
+func (r *Ratchet) PickleLibOlm(target []byte) (int, error) {
 	if len(target) < r.PickleLen() {
 		return 0, fmt.Errorf("pickle ratchet: %w", goolm.ErrValueTooShort)
 	}
@@ -407,7 +407,7 @@ func (r Ratchet) PickleLibOlm(target []byte) (int, error) {
 }
 
 // PickleLen returns the actual number of bytes the pickled ratchet will have.
-func (r Ratchet) PickleLen() int {
+func (r *Ratchet) PickleLen() int {
 	length := r.RootKey.PickleLen()
 	if r.SenderChains.IsSet {
 		length += libolmpickle.PickleUInt32Len(1)
@@ -416,14 +416,14 @@ func (r Ratchet) PickleLen() int {
 		length += libolmpickle.PickleUInt32Len(0)
 	}
 	length += libolmpickle.PickleUInt32Len(uint32(len(r.ReceiverChains)))
-	length += len(r.ReceiverChains) * receiverChain{}.PickleLen()
+	length += len(r.ReceiverChains) * (&receiverChain{}).PickleLen()
 	length += libolmpickle.PickleUInt32Len(uint32(len(r.SkippedMessageKeys)))
-	length += len(r.SkippedMessageKeys) * skippedMessageKey{}.PickleLen()
+	length += len(r.SkippedMessageKeys) * (&skippedMessageKey{}).PickleLen()
 	return length
 }
 
 // PickleLen returns the minimum number of bytes the pickled ratchet must have.
-func (r Ratchet) PickleLenMin() int {
+func (r *Ratchet) PickleLenMin() int {
 	length := r.RootKey.PickleLen()
 	length += libolmpickle.PickleUInt32Len(0)
 	length += libolmpickle.PickleUInt32Len(0)

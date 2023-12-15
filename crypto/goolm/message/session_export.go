@@ -20,7 +20,7 @@ type MegolmSessionExport struct {
 }
 
 // Encode returns the encoded message in the correct format.
-func (s MegolmSessionExport) Encode() []byte {
+func (s *MegolmSessionExport) Encode() []byte {
 	output := make([]byte, 165)
 	output[0] = sessionExportVersion
 	binary.BigEndian.PutUint32(output[1:], s.Counter)
